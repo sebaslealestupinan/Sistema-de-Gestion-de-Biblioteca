@@ -1,5 +1,9 @@
 .venv/
 *.db
+.idea/
+.vscode/
 __pycache__/
-entorno/
 *.pyc
+*.pyo
+*.log
+venv/
