@@ -1,13 +1,17 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from db.database import create_database
+from autores import autor
+from libros import libro
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_database()
+    print("Base de datos en linea")
+    yield
+    print("Catalogo cerrado finalizado")
 
+app = FastAPI(lifespan=lifespan)
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+app.include_router(autor.router)
+app.include_router(libro.router)
