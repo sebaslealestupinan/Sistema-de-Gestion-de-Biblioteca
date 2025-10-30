@@ -22,8 +22,6 @@ Está construida con **FastAPI**, **SQLModel** y **SQLite**, e implementa un dis
 catalogo_biblioteca/
 │
 ├── main.py                  # Punto de entrada principal de la API
-├── db/
-│   ├── database.py          # Configuración del motor SQLModel y sesión
 │
 ├── autores/
 │   ├── autor.py             # Rutas relacionadas con los autores
@@ -37,7 +35,8 @@ catalogo_biblioteca/
 │
 ├── db/
 │   └── models.py            # Modelos SQLModel (Autor, Libro, Depósito, etc.)
-│
+│   ├── database.py          # Configuración del motor SQLModel y sesión
+|
 ├── .gitignore
 └── requirements.txt         # Dependencias del proyecto
 ```
