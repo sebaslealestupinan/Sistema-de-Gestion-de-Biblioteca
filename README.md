@@ -73,7 +73,7 @@ Actívalo:
 ### 3️⃣ Instalar dependencias
 
 ```bash
-pip install fastapi uvicorn sqlmodel
+pip install -r requirements.txt
 ```
 
 *(Opcional: agrega `python-dotenv` si usas variables de entorno.)*
