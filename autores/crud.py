@@ -1,3 +1,14 @@
+"""
+autor/crud.py
+-------------
+Contiene las funciones CRUD (crear, leer, actualizar, mover y restaurar) para
+la entidad Autor, incluyendo su interacción con los modelos de Libro y las
+tablas del depósito (histórico). 
+
+Permite gestionar autores activos en el catálogo y aquellos que se han
+movido temporalmente al depósito.
+"""
+
 from typing import Optional
 from fastapi import HTTPException
 from sqlmodel import select
@@ -11,6 +22,19 @@ from .schemas import CrearAutor, ActualizarAutor
 
 
 def ingresar_autor(data: CrearAutor, session: sessionDep):
+    """
+    Crea un nuevo autor en el catálogo.
+
+    Args:
+        data (CrearAutor): Datos del autor a registrar.
+        session (Session): Sesión activa de la base de datos.
+
+    Returns:
+        dict: Mensaje confirmando la creación del autor.
+
+    Raises:
+        HTTPException: Si el autor ya existe en el catálogo.
+    """
     autor_existente = session.exec(
         select(Autor).where(Autor.nombre_apellidos == data.nombre_apellidos)
     ).first()
@@ -24,7 +48,21 @@ def ingresar_autor(data: CrearAutor, session: sessionDep):
     session.refresh(autor)
     return {"message": f"El autor {autor.nombre_apellidos} fue creado correctamente"}
 
+
 def ver_autores(session: sessionDep, pais: Optional[str] = None):
+    """
+    Lista todos los autores del catálogo o filtra por país de origen.
+
+    Args:
+        session (Session): Sesión activa de la base de datos.
+        pais (Optional[str]): País de origen para filtrar (opcional).
+
+    Returns:
+        list[Autor]: Lista de autores encontrados.
+
+    Raises:
+        HTTPException: Si no se encuentran autores.
+    """
     query = select(Autor)
     if pais:
         query = query.where(Autor.pais_origen == pais)
@@ -36,7 +74,21 @@ def ver_autores(session: sessionDep, pais: Optional[str] = None):
 
     return autores
 
+
 def ver_autor_libros(nombre_apellidos: str, session: sessionDep):
+    """
+    Muestra los libros asociados a un autor por su nombre y apellidos.
+
+    Args:
+        nombre_apellidos (str): Nombre completo del autor.
+        session (Session): Sesión activa.
+
+    Returns:
+        dict: Información del autor y sus libros.
+
+    Raises:
+        HTTPException: Si el autor no existe.
+    """
     autor = session.exec(
         select(Autor).where(Autor.nombre_apellidos == nombre_apellidos)
     ).first()
@@ -51,10 +103,25 @@ def ver_autor_libros(nombre_apellidos: str, session: sessionDep):
         "cantidad": len(libros)
     }
 
-def ver_autor_por_id(id_autor: str, session:sessionDep):
+
+def ver_autor_por_id(id_autor: str, session: sessionDep):
+    """
+    Obtiene la información de un autor y sus libros a partir de su ID.
+
+    Args:
+        id_autor (str): Identificador único del autor.
+        session (Session): Sesión activa.
+
+    Returns:
+        dict: Información del autor y sus libros.
+
+    Raises:
+        HTTPException: Si el autor no se encuentra.
+    """
     autor = session.exec(select(Autor).where(Autor.id == id_autor)).first()
     if not autor:
         raise HTTPException(status_code=404, detail=f"{id_autor} no existe")
+
     libros = autor.libros
     return {
         "autor": autor.nombre_apellidos,
@@ -62,7 +129,22 @@ def ver_autor_por_id(id_autor: str, session:sessionDep):
         "cantidad": len(libros)
     }
 
-def actualizar_autor_existente(session: sessionDep, data: ActualizarAutor       , nombre_apellidos: str):
+
+def actualizar_autor_existente(session: sessionDep, data: ActualizarAutor, nombre_apellidos: str):
+    """
+    Actualiza los datos de un autor existente en el catálogo.
+
+    Args:
+        session (Session): Sesión activa.
+        data (ActualizarAutor): Campos a modificar (descripción, año de muerte, etc.).
+        nombre_apellidos (str): Nombre completo del autor a actualizar.
+
+    Returns:
+        dict: Mensaje de confirmación.
+
+    Raises:
+        HTTPException: Si el autor no existe.
+    """
     autor = session.exec(
         select(Autor).where(Autor.nombre_apellidos == nombre_apellidos)
     ).first()
@@ -76,31 +158,37 @@ def actualizar_autor_existente(session: sessionDep, data: ActualizarAutor       
     session.commit()
     return {"message": f"El autor {nombre_apellidos} fue actualizado correctamente"}
 
+
 def mover_a_deposito(nombre_apellidos: str, session: sessionDep):
-    autor_deposito = session.exec(select(DepositoAutores).
-                                where(DepositoAutores.nombre_apellidos == nombre_apellidos)).first()
-    Deposito= False
+    """
+    Mueve un autor y sus libros asociados al depósito.
+
+    Si el autor ya está en el depósito, no se duplica, pero se agregan los
+    libros faltantes para mantener las relaciones consistentes.
+
+    Args:
+        nombre_apellidos (str): Nombre completo del autor.
+        session (Session): Sesión activa.
+
+    Returns:
+        dict: Mensaje de resultado.
+
+    Raises:
+        HTTPException: Si el autor no se encuentra en el catálogo.
+    """
+    autor_deposito = session.exec(
+        select(DepositoAutores).where(DepositoAutores.nombre_apellidos == nombre_apellidos)
+    ).first()
+    Deposito = False
     if not autor_deposito:
-        autor = session.exec(select(Autor).
-                            where(Autor.nombre_apellidos == nombre_apellidos)).first()
+        autor = session.exec(
+            select(Autor).where(Autor.nombre_apellidos == nombre_apellidos)
+        ).first()
         Deposito = True
         if not autor:
             raise HTTPException(status_code=404, detail="Autor no encontrado")
 
-        autor_deposito = DepositoAutores(
-            id_autor_original=autor.id,
-            nombre_apellidos=autor.nombre_apellidos,
-            pais_origen=autor.pais_origen,
-            descripcion=autor.descripcion,
-            año_nacimiento=autor.año_nacimiento,
-            año_muerte=autor.año_muerte
-        )
-        session.add(autor_deposito)
-        session.commit()
-        session.refresh(autor_deposito)
-
     for libro in autor.libros:
-
         libro_en_deposito = session.exec(
             select(DepositoLibro).where(DepositoLibro.id_libro_original == libro.id)
         ).first()
@@ -135,7 +223,21 @@ def mover_a_deposito(nombre_apellidos: str, session: sessionDep):
 
     return {"message": f"El autor {nombre_apellidos} y sus libros fueron movidos al depósito correctamente"}
 
+
 def ver_deposito(session: sessionDep, pais: Optional[str] = None):
+    """
+    Lista los autores almacenados en el depósito o filtra por país.
+
+    Args:
+        session (Session): Sesión activa.
+        pais (Optional[str]): País de origen (opcional).
+
+    Returns:
+        list[DepositoAutores]: Lista de autores del depósito.
+
+    Raises:
+        HTTPException: Si no se encuentran autores.
+    """
     query = select(DepositoAutores)
     if pais:
         query = query.where(Autor.pais_origen == pais)
@@ -147,11 +249,24 @@ def ver_deposito(session: sessionDep, pais: Optional[str] = None):
 
     return autores
 
-def buscar_autor_en_deposito(nombre_apellidos: str, session:sessionDep):
 
+def buscar_autor_en_deposito(nombre_apellidos: str, session: sessionDep):
+    """
+    Busca un autor en el depósito junto con sus libros asociados.
+
+    Args:
+        nombre_apellidos (str): Nombre completo del autor.
+        session (Session): Sesión activa.
+
+    Returns:
+        dict: Datos del autor y sus libros.
+
+    Raises:
+        HTTPException: Si el autor no está en el depósito.
+    """
     autor = session.exec(
-        select(DepositoAutores).where(
-            DepositoAutores.nombre_apellidos == nombre_apellidos)).first()
+        select(DepositoAutores).where(DepositoAutores.nombre_apellidos == nombre_apellidos)
+    ).first()
 
     if not autor:
         raise HTTPException(
@@ -170,7 +285,21 @@ def buscar_autor_en_deposito(nombre_apellidos: str, session:sessionDep):
         "libros_asociados": [libro.titulo for libro in libros]
     }
 
+
 def sacar_de_deposito(nombre: str, session: sessionDep):
+    """
+    Restaura un autor y sus libros desde el depósito al catálogo principal.
+
+    Args:
+        nombre (str): Nombre del autor a restaurar.
+        session (Session): Sesión activa.
+
+    Returns:
+        dict: Mensaje de confirmación.
+
+    Raises:
+        HTTPException: Si el autor no está en el depósito.
+    """
     autor_deposito = session.exec(
         select(DepositoAutores).where(DepositoAutores.nombre_apellidos == nombre)
     ).first()

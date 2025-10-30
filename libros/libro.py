@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 from typing import Optional
 from db.database import sessionDep
 from .schemas import CrearLibro, ActualizarLibro
@@ -6,7 +6,6 @@ from .crud import (
     ingresar_libro,
     ver_libro_titulo,
     ver_libros,
-    ver_libro_id,
     actualizar_libro_existente,
     mover_a_deposito_libro,
     ver_deposito_libros,
@@ -24,17 +23,14 @@ router = APIRouter(
 def crear_libro(data: CrearLibro, session: sessionDep):
     return ingresar_libro(data, session)
 
-@router.get("/", summary="Listar libros o filtrar por editorial")
-def listar_libros(session: sessionDep, editorial: Optional[str] = Query(default=None, description="Filtrar por editorial")):
-    return ver_libros(session, editorial)
+@router.get("/", summary="Listar libros y/o filtrar por año")
+def listar_libros(session: sessionDep,
+                  año_publicacion: Optional[int] = Query(None, description="Filtrar por eaño")):
+    return ver_libros(session, año_publicacion)
 
 @router.get("/{titulo}", summary="Buscar un libro por el titulo")
 def obtener_libro(titulo: str, session: sessionDep):
     return ver_libro_titulo(titulo, session)
-
-@router.get("/{id_autor}", summary="Buscar un libro por su id")
-def obtener_libro_id(id_autor: int, session: sessionDep):
-    return ver_libro_id(id_autor, session)
 
 @router.put("/{titulo}", summary="Actualizar información de un libro")
 def actualizar_libro(titulo: str, data: ActualizarLibro, session: sessionDep):
@@ -45,8 +41,8 @@ def eliminar_libro(titulo: str, session: sessionDep):
     return mover_a_deposito_libro(titulo, session)
 
 @router.get("/deposito/", summary="Listar libros en el depósito")
-def listar_libros_deposito(session: sessionDep, año_publicacion: int):
-    return ver_deposito_libros(session, año_publicacion)
+def listar_libros_deposito(session: sessionDep):
+    return ver_deposito_libros(session)
 
 @router.get("/deposito/{titulo}", summary="Buscar libro en el depósito")
 def buscar_libro_deposito(titulo: str, session: sessionDep):
