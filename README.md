@@ -48,8 +48,8 @@ catalogo_biblioteca/
 ### 1️⃣ Clonar el repositorio
 
 ```bash
-git clone https://github.com/<tu_usuario>/<nombre_del_repositorio>.git
-cd <nombre_del_repositorio>
+git clone https://github.com/sebaslealestupinan/Sistema-de-Gestion-de-Biblioteca.git
+cd <Sistema-de-Gestion-de-Biblioteca>
 ```
 
 ### 2️⃣ Crear un entorno virtual
